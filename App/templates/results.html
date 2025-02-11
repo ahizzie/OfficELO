@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Recent Results{% endblock %}
+
+{% block content %}
+<br>
+<h3>Recent Match Results</h3>
+<br>
+
+<table>
+    <thead>
+        <tr>
+            <th>Player &emsp;</th>
+            <th>Score &emsp;</th>
+            <th>Score &emsp;</th>
+            <th>Player &emsp;</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% if matches %}
+    {% for match in matches %}
+        <tr>
+            <td> {{ match.name1 }} </td>
+            <td> {{ match.score1 }} </td>
+            <td> {{ match.score2 }} </td>
+            <td> {{ match.name2 }} </td>
+        </tr>
+    {% endfor %}
+    {% else %}
+        <tr>
+            <td colspan="3">No matches yet</td>
+        </tr>
+    {% endif %}
+    </tbody>
+</table>
+
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Powersystems' Leaderboard{% endblock %}
+
+{% block content %}
+<br>
+<h1>Welcome to Powersystems' Ping Pong ranking tracker</h1>
+<h4>Current Leaderboard:</h4>
+<br>
+
+<style> width: 80% </style>
+<table>
+    <thead>
+        <tr>
+            <th># &ensp;</th>
+            <th>Name &ensp;&ensp;</th>
+            <th>Rating</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user in users %}
+        {% if user.elo > 0 %}
+        <tr>
+            <td>{{ loop.index }}</td>  <td>{{ user.name }}</td>
+            <td>{{ user.elo | int }}</td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}
