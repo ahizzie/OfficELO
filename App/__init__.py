@@ -1,6 +1,7 @@
 from flask import Flask, current_app
 from flask_sqlalchemy import SQLAlchemy
 from os import path, makedirs, environ
+import os
 from flask_login import login_manager
 from werkzeug.security import generate_password_hash
 
@@ -14,8 +15,7 @@ def create_app():
     database_uri = environ.get('DATABASE_URL', f'sqlite:///{DB_NAME}')
     if database_uri.startswith('postgres://'):
         database_uri = database_uri.replace('postgres://', 'postgresql://', 1)
-    app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
-    print(f"SQLALCHEMY_DATABASE_URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL').replace("postgres://", "postgresql://", 1)
     db.init_app(app)
 
     from .models import User, Match
