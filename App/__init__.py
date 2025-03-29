@@ -12,10 +12,16 @@ DB_NAME = "database.db"
 def create_app():
     app = Flask(__name__)
     app.config['SECRET_KEY'] = environ.get('SECRET_KEY', 'fallback')
+
+    # Get database URI safely
     database_uri = environ.get('DATABASE_URL', f'sqlite:///{DB_NAME}')
-    if database_uri.startswith('postgres://'):
+
+    # Fix PostgreSQL URL format if needed
+    if database_uri and database_uri.startswith('postgres://'):
         database_uri = database_uri.replace('postgres://', 'postgresql://', 1)
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL').replace("postgres://", "postgresql://", 1)
+
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_uri  # Use the processed URI
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db.init_app(app)
 
     from .models import User, Match
