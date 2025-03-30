@@ -1,5 +1,6 @@
 from flask import Flask, current_app
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 from os import path, makedirs, environ
 import os
 from flask_login import login_manager
@@ -13,15 +14,17 @@ def create_app():
     app = Flask(__name__)
     app.config['SECRET_KEY'] = environ.get('SECRET_KEY', 'fallback')
 
-    # Database configuration
+    # Always use PostgreSQL on Heroku, SQLite only locally
     database_uri = environ.get('DATABASE_URL')
-    if database_uri and database_uri.startswith('postgres://'):
+    if not database_uri:
+        database_uri = f'sqlite:///{DB_NAME}'
+    elif database_uri.startswith('postgres://'):
         database_uri = database_uri.replace('postgres://', 'postgresql://', 1)
-    app.config['SQLALCHEMY_DATABASE_URI'] = database_uri or f'sqlite:///{DB_NAME}'
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    # Initialize extensions with the app
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db.init_app(app)
+    migrate = Migrate(app, db)
 
     # Import and register blueprints
     from .views import views
@@ -42,9 +45,12 @@ def create_app():
 
     # Create tables within app context
     with app.app_context():
-        db.create_all()
         if app.config['SQLALCHEMY_DATABASE_URI'].startswith('sqlite://'):
-            print("Created SQLite database tables")
+            try:
+                db.create_all()
+                print("Created SQLite database tables")
+            except Exception as e:
+                print(f"Error creating tables: {e}")
 
     return app
 
