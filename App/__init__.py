@@ -13,45 +13,38 @@ def create_app():
     app = Flask(__name__)
     app.config['SECRET_KEY'] = environ.get('SECRET_KEY', 'fallback')
 
-    # Get database URI safely
+    # Database configuration
     database_uri = environ.get('DATABASE_URL')
-
-    # If no DATABASE_URL is set (local development), use SQLite
-    if not database_uri:
-        database_uri = f'sqlite:///{DB_NAME}'
-        print("Using SQLite database for local development")
-    else:
-        # Fix PostgreSQL URL format if needed
-        if database_uri.startswith('postgres://'):
-            database_uri = database_uri.replace('postgres://', 'postgresql://', 1)
-        print("Using PostgreSQL database from DATABASE_URL")
-
-    app.config['SQLALCHEMY_DATABASE_URI'] = database_uri  # Use the processed URI
+    if database_uri and database_uri.startswith('postgres://'):
+        database_uri = database_uri.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_uri or f'sqlite:///{DB_NAME}'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+    # Initialize extensions with the app
     db.init_app(app)
 
-    from .models import User, Match
-
-    if database_uri.startswith('sqlite://'):
-        create_database(app)
-    else:
-        with app.app_context():
-            db.create_all()
-
+    # Import and register blueprints
     from .views import views
     from .auth import auth
-
     app.register_blueprint(views, url_prefix='/')
     app.register_blueprint(auth, url_prefix='/')
 
-    manager = login_manager.LoginManager()
-    manager.login_view = 'auth.login'
-    manager.init_app(app)
+    # Login manager setup
+    from flask_login import LoginManager
+    login_manager = LoginManager()
+    login_manager.login_view = 'auth.login'
+    login_manager.init_app(app)
 
-    @manager.user_loader
+    @login_manager.user_loader
     def load_user(id):
         from .models import User
         return User.query.get(int(id))
+
+    # Create tables within app context
+    with app.app_context():
+        db.create_all()
+        if app.config['SQLALCHEMY_DATABASE_URI'].startswith('sqlite://'):
+            print("Created SQLite database tables")
 
     return app
 
