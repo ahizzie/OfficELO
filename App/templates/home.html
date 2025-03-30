@@ -2,30 +2,86 @@
 {% block title %}Powersystems' Leaderboard{% endblock %}
 
 {% block content %}
-<br>
-<h1>Welcome to Powersystems' Ping Pong ranking tracker</h1>
-<h4>Current Leaderboard:</h4>
-<br>
+<div class="container py-4">
+    <div class="text-center mb-5">
+        <h1 class="display-4 mb-3">🏓 Powersystems Table Tennis Rankings</h1>
+        <p class="lead text-muted">ELO ratings updated based on results against others</p>
+    </div>
 
-<style> width: 80% </style>
-<table>
-    <thead>
-        <tr>
-            <th># &ensp;</th>
-            <th>Name &ensp;&ensp;</th>
-            <th>Rating</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for user in users %}
-        {% if user.elo > 0 %}
-        <tr>
-            <td>{{ loop.index }}</td>  <td>{{ user.name }}</td>
-            <td>{{ user.elo | int }}</td>
-        </tr>
-        {% endif %}
-        {% endfor %}
-    </tbody>
-</table>
+    <div class="card shadow-lg">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h4 mb-0">Current Leaderboard</h2>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="thead-light">
+                        <tr>
+                            <th class="pl-4">Rank</th>
+                            <th>Player</th>
+                            <th class="text-right pr-4">Rating</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users if user.elo > 0 %}
+                        <tr class="{{ 'table-warning' if loop.index == 1 }}">
+                            <td class="pl-4 font-weight-bold">
+                                {{ loop.index }}
+                                {% if loop.index == 1 %}
+                                <span class="ml-2">🥇</span>
+                                {% elif loop.index == 2 %}
+                                <span class="ml-2">🥈</span>
+                                {% elif loop.index == 3 %}
+                                <span class="ml-2">🥉</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="font-weight-bold">{{ user.name }}</span>
+                            </td>
+                            <td class="text-right pr-4">
+                                <span class="badge badge-pill {{ 'badge-success' if user.elo > 1500 else 'badge-primary' }}">
+                                    {{ user.elo|int }}
+                                </span>
+                                {% if loop.index == 1 %}
+                                <span class="ml-2 text-success">👑</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="3" class="text-center py-4 text-muted">
+                                No players yet. Be the first to play!
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
 
+<style>
+    .table {
+        font-size: 1.1rem;
+    }
+    .table-hover tbody tr:hover {
+        transform: translateX(4px);
+        transition: transform 0.2s ease;
+    }
+    .badge-success {
+        background-color: #28a745;
+    }
+    .badge-primary {
+        background-color: #007bff;
+    }
+    .card {
+        border-radius: 15px;
+        overflow: hidden;
+    }
+    .display-4 {
+        font-weight: 600;
+        color: #2c3e50;
+    }
+</style>
 {% endblock %}

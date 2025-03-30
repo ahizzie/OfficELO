@@ -32,6 +32,11 @@
                 <a class="nav-item nav-link" id="results" href="/results">Recent Results</a>
                 {% if user.is_authenticated %}
                 <a class="nav-item nav-link" id="report" href="/report">Report Result</a>
+                {% if current_user.is_admin %}
+                <a class="nav-item nav-link" id="admin" href="/admin" style="color: #ffcc00;">
+                    <i class="fa fa-lock"></i> Admin
+                </a>
+                {% endif %}
                 <a class="nav-item nav-link" id="logout" href="/logout">Logout</a>
                 {% else %}
                 <a class="nav-item nav-link" id="login" href="/login">Login</a>

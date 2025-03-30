@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, url_for, request, flash, redirect
 from flask_login import login_required, current_user
 from .models import User, Match
 from . import db
+from datetime import datetime
 
 views = Blueprint('views', __name__)
 
@@ -46,7 +47,8 @@ def home():
 
 @views.route('/results')
 def results():
-    matches = Match.query.order_by(Match.date.desc()).all()
+    # Get latest 50 matches ordered by date (newest first)
+    matches = Match.query.order_by(Match.date.desc()).limit(50).all()
     users = User.query.all()
     return render_template('results.html', matches=matches, users=users, user=current_user)
 
@@ -68,24 +70,96 @@ def report():
             flash("No draws allowed!", category="error")
             return redirect((url_for('views.report')))
 
-        # Fetch the opponent from the database
+        try:
+            your_score_int = int(your_score)
+            opponent_score_int = int(opponent_score)
+        except ValueError:
+            flash('Scores must be numbers', 'error')
+            return redirect(url_for('views.report'))
+
+        # Fetch the opponent
         opponent = User.query.get(opponent_id)
         if not opponent:
             flash('Invalid opponent selected.', 'error')
             return redirect(url_for('views.report'))
 
-        # Create a new match record (example logic)
+        # Create match record
         new_match = Match(
             name1=current_user.name,
             name2=opponent.name,
-            score1=your_score,
-            score2=opponent_score,
+            score1=your_score_int,
+            score2=opponent_score_int,
+            date=datetime.utcnow()
         )
         db.session.add(new_match)
-        db.session.commit()
-        update_elo(current_user, opponent, [1 if your_score > opponent_score else 2][0])
 
+        # Determine winner and update ELO
+        winner = 1 if your_score_int > opponent_score_int else 2
+        update_elo(current_user, opponent, winner)
+
+        db.session.commit()
         flash('Match reported successfully!', 'success')
-        return redirect('/report')
+        return redirect('/results')
 
     return render_template('report.html', user=current_user, users=users)
+
+
+@views.route('/admin')
+@login_required
+def admin_dashboard():
+    if not current_user.is_admin:
+        flash('Admin access required', 'danger')
+        return redirect(url_for('views.home'))
+
+    users = User.query.all()
+    matches = Match.query.order_by(Match.date.desc()).limit(50).all()
+    return render_template('admin.html', users=users, matches=matches, user=current_user)
+
+
+@views.route('/admin/delete_user/<int:user_id>', methods=['POST'])
+@login_required
+def delete_user(user_id):
+    if not current_user.is_admin:
+        flash('Admin access required', 'danger')
+        return redirect(url_for('views.home'))
+
+    user = User.query.get(user_id)
+    if user:
+        db.session.delete(user)
+        db.session.commit()
+        flash('User deleted successfully', 'success')
+    return redirect(url_for('views.admin_dashboard'))
+
+
+@views.route('/admin/delete_match/<int:match_id>', methods=['POST'])
+@login_required
+def delete_match(match_id):
+    if not current_user.is_admin:
+        flash('Admin access required', 'danger')
+        return redirect(url_for('views.home'))
+
+    match = Match.query.get(match_id)
+    if match:
+        db.session.delete(match)
+        db.session.commit()
+        flash('Match deleted successfully', 'success')
+    return redirect(url_for('views.admin_dashboard'))
+
+
+@views.route('/admin/update_elo/<int:user_id>', methods=['POST'])
+@login_required
+def update_elo(user_id):
+    if not current_user.is_admin:
+        flash('Admin access required', 'danger')
+        return redirect(url_for('views.home'))
+
+    user = User.query.get(user_id)
+    new_elo = request.form.get('elo')
+    if user and new_elo:
+        try:
+            user.elo = int(new_elo)
+            db.session.commit()
+            flash('ELO updated successfully', 'success')
+        except ValueError:
+            flash('Invalid ELO value', 'danger')
+    return redirect(url_for('views.admin_dashboard'))
