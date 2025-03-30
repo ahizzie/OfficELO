@@ -13,6 +13,8 @@ def create_app():
     app = Flask(__name__)
     app.config['SECRET_KEY'] = environ.get('SECRET_KEY', 'fallback')
 
+    database_uri = os.environ.get('DATABASE_URL')
+
     # Force PostgreSQL on Heroku, SQLite only for local development
     if database_uri:
         if database_uri.startswith('postgres://'):
@@ -36,7 +38,7 @@ def create_app():
     manager.login_view = 'auth.login'
     manager.init_app(app)
 
-    @login_manager.user_loader
+    @manager.user_loader
     def load_user(id):
         from .models import User
         return User.query.get(int(id))
