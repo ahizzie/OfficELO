@@ -14,11 +14,17 @@ def create_app():
     app.config['SECRET_KEY'] = environ.get('SECRET_KEY', 'fallback')
 
     # Get database URI safely
-    database_uri = environ.get('DATABASE_URL', f'sqlite:///{DB_NAME}')
+    database_uri = environ.get('DATABASE_URL')
 
-    # Fix PostgreSQL URL format if needed
-    if database_uri and database_uri.startswith('postgres://'):
-        database_uri = database_uri.replace('postgres://', 'postgresql://', 1)
+    # If no DATABASE_URL is set (local development), use SQLite
+    if not database_uri:
+        database_uri = f'sqlite:///{DB_NAME}'
+        print("Using SQLite database for local development")
+    else:
+        # Fix PostgreSQL URL format if needed
+        if database_uri.startswith('postgres://'):
+            database_uri = database_uri.replace('postgres://', 'postgresql://', 1)
+        print("Using PostgreSQL database from DATABASE_URL")
 
     app.config['SQLALCHEMY_DATABASE_URI'] = database_uri  # Use the processed URI
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
