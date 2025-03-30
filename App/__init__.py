@@ -13,14 +13,14 @@ def create_app():
     app = Flask(__name__)
     app.config['SECRET_KEY'] = environ.get('SECRET_KEY', 'fallback')
 
-    # Always use PostgreSQL on Heroku, SQLite only locally
-    database_uri = environ.get('DATABASE_URL')
-    if not database_uri:
-        database_uri = f'sqlite:///{DB_NAME}'
-    elif database_uri.startswith('postgres://'):
-        database_uri = database_uri.replace('postgres://', 'postgresql://', 1)
+    # Force PostgreSQL on Heroku, SQLite only for local development
+    if database_uri:
+        if database_uri.startswith('postgres://'):
+            database_uri = database_uri.replace('postgres://', 'postgresql://', 1)
+        app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
+    else:
+        app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{DB_NAME}'
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db.init_app(app)
 
@@ -32,9 +32,9 @@ def create_app():
 
     # Login manager setup
     from flask_login import LoginManager
-    login_manager = LoginManager()
-    login_manager.login_view = 'auth.login'
-    login_manager.init_app(app)
+    manager = login_manager.LoginManager()
+    manager.login_view = 'auth.login'
+    manager.init_app(app)
 
     @login_manager.user_loader
     def load_user(id):
