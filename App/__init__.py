@@ -11,7 +11,7 @@ DB_NAME = "database.db"
 
 
 def create_app():
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder='static', static_url_path='')
 
     # Determine environment and set configuration
     if 'DATABASE_URL' in os.environ:
