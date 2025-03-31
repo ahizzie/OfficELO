@@ -18,7 +18,6 @@ def create_app():
         # Production (Heroku)
         app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL'].replace("postgres://", "postgresql://", 1)  # Heroku's postgres url starts with postgres://, need to replace with postgresql:// for sqlalchemy
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Suppress deprecation warning
-        logging.log("USED POSTGRES!")
     else:
         # Development/Testing
         app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{DB_NAME}'
