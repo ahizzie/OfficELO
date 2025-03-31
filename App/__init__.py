@@ -1,3 +1,4 @@
+import logging
 from flask import Flask, current_app
 from flask_sqlalchemy import SQLAlchemy
 from os import path, makedirs, environ
@@ -17,6 +18,7 @@ def create_app():
         # Production (Heroku)
         app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL'].replace("postgres://", "postgresql://", 1)  # Heroku's postgres url starts with postgres://, need to replace with postgresql:// for sqlalchemy
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Suppress deprecation warning
+        logging.log("USED POSTGRES!")
     else:
         # Development/Testing
         app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{DB_NAME}'
@@ -43,7 +45,7 @@ def create_app():
         try:
             db.create_all()
         except Exception as e:
-            print(f"Error creating tables: {e}")
+            logging.error(f"Error creating tables: {e}")
 
     @manager.user_loader
     def load_user(id):
@@ -52,18 +54,4 @@ def create_app():
 
     return app
 
-
-def create_database(app):
-    db_path = path.abspath(path.join(path.dirname(__file__), DB_NAME))
-    # db_path = "C:/Users/andrew.hislop/PycharmProjects/OfficELO/App/test_database.db"
-    print(f"Database path: {db_path}")
-    if not path.exists(db_path):
-        try:
-            makedirs(path.dirname(db_path), exist_ok=True)
-            with app.app_context():
-                from .models import User, Match
-                db.create_all()
-                print("Database created successfully!")
-        except Exception as e:
-            current_app.logger.error(f"Error creating database: {e}")
 
