@@ -15,93 +15,91 @@ DB_NAME = "database.db"
 
 
 def create_app():
-    app = Flask(__name__)
-
-    # Log application startup
-    logger.info("Initializing Flask application")
-
-    app.config['SECRET_KEY'] = environ.get('SECRET_KEY', 'fallback')
-    logger.debug(f"Using SECRET_KEY: {'*' * len(app.config['SECRET_KEY'])}")
-
-    # Database configuration
-    database_uri = environ.get('DATABASE_URL', f'sqlite:///{DB_NAME}')
-    logger.info(f"Raw database URI: {database_uri}")
-
-    # Fix PostgreSQL URL format if needed
-    if database_uri and database_uri.startswith('postgres://'):
-        database_uri = database_uri.replace('postgres://', 'postgresql://', 1)
-        logger.info(f"Converted database URI to: {database_uri}")
-
-    app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
     try:
-        db.init_app(app)
-        logger.info("SQLAlchemy initialized successfully")
-    except Exception as e:
-        logger.error(f"Failed to initialize SQLAlchemy: {str(e)}")
-        raise
+        app = Flask(__name__)
 
-    # Database setup
-    if database_uri.startswith('sqlite://'):
-        logger.info("SQLite database detected")
-        create_database(app)
-    else:
-        logger.info("Non-SQLite database detected (likely PostgreSQL)")
+        # Log application startup
+        logger.info("Initializing Flask application")
+
+        app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fallback')
+        logger.debug(f"Using SECRET_KEY: {'*' * len(app.config['SECRET_KEY'])}")
+
+        # Database configuration
+        database_uri = os.environ.get('DATABASE_URL')
+        logger.info(f"Raw database URI: {database_uri}")
+
+        app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
+        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
         try:
-            with app.app_context():
-                db.create_all()
-                logger.info("Database tables created successfully")
+            db.init_app(app)
+            logger.info("SQLAlchemy initialized successfully")
         except Exception as e:
-            logger.error(f"Failed to create database tables: {str(e)}")
+            logger.error(f"Failed to initialize SQLAlchemy: {str(e)}")
             raise
 
-    # Blueprint registration
-    from .views import views
-    from .auth import auth
+        # Database setup
+        if database_uri.startswith('sqlite://'):
+            logger.info("SQLite database detected")
+            create_database(app)
+        else:
+            logger.info("Non-SQLite database detected (likely PostgreSQL)")
+            try:
+                with app.app_context():
+                    db.create_all()
+                    logger.info("Database tables created successfully")
+            except Exception as e:
+                logger.error(f"Failed to create database tables: {str(e)}")
+                raise
 
-    app.register_blueprint(views, url_prefix='/')
-    app.register_blueprint(auth, url_prefix='/')
-    logger.info("Blueprints registered successfully")
+        # Blueprint registration
+        from .views import views
+        from .auth import auth
 
-    # Login manager setup
-    manager = login_manager.LoginManager()
-    manager.login_view = 'auth.login'
+        app.register_blueprint(views, url_prefix='/')
+        app.register_blueprint(auth, url_prefix='/')
+        logger.info("Blueprints registered successfully")
 
-    try:
-        manager.init_app(app)
-        logger.info("Login manager initialized successfully")
-    except Exception as e:
-        logger.error(f"Failed to initialize login manager: {str(e)}")
-        raise
+        # Login manager setup
+        manager = login_manager.LoginManager()
+        manager.login_view = 'auth.login'
 
-    @manager.user_loader
-    def load_user(id):
         try:
-            from .models import User
-            user = User.query.get(int(id))
-            if not user:
-                logger.warning(f"User with ID {id} not found")
-            return user
+            manager.init_app(app)
+            logger.info("Login manager initialized successfully")
         except Exception as e:
-            logger.error(f"Error loading user {id}: {str(e)}")
-            return None
+            logger.error(f"Failed to initialize login manager: {str(e)}")
+            raise
 
-    # Add request logging middleware
-    @app.before_request
-    def log_request_info():
-        logger.info(f"Incoming request: {request.method} {request.path}")
-        if request.method == 'POST':
-            logger.debug(f"Request data: {request.form.to_dict()}")
+        @manager.user_loader
+        def load_user(id):
+            try:
+                from .models import User
+                user = User.query.get(int(id))
+                if not user:
+                    logger.warning(f"User with ID {id} not found")
+                return user
+            except Exception as e:
+                logger.error(f"Error loading user {id}: {str(e)}")
+                return None
 
-    @app.after_request
-    def log_response_info(response):
-        logger.info(f"Outgoing response: {response.status_code}")
-        return response
+        # Add request logging middleware
+        @app.before_request
+        def log_request_info():
+            logger.info(f"Incoming request: {request.method} {request.path}")
+            if request.method == 'POST':
+                logger.debug(f"Request data: {request.form.to_dict()}")
 
-    logger.info("Application initialization complete")
-    return app
+        @app.after_request
+        def log_response_info(response):
+            logger.info(f"Outgoing response: {response.status_code}")
+            return response
 
+        logger.info("Application initialization complete")
+        return app
+    except Exception as e:
+        logging.critical(f"APP INIT FAILED: {str(e)}", exc_info=True)
+        raise
 
 def create_database(app):
     db_path = path.abspath(path.join(path.dirname(__file__), DB_NAME))
