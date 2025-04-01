@@ -3,7 +3,8 @@ from flask import Flask, current_app, request
 from flask_sqlalchemy import SQLAlchemy
 from os import path, makedirs, environ
 import os
-from flask_login import login_manager
+from .extensions import db, login_manager
+from .commands import create_tables
 from werkzeug.security import generate_password_hash
 
 # Configure logging
@@ -26,6 +27,8 @@ def create_app():
 
         # Database configuration
         database_uri = os.environ.get('DATABASE_URL')
+        if not database_uri:
+            database_uri = f'sqlite:///{path.abspath(path.join(path.dirname(__file__), DB_NAME))}'
         logger.info(f"Raw database URI: {database_uri}")
 
         app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
@@ -45,9 +48,8 @@ def create_app():
         else:
             logger.info("Non-SQLite database detected (likely PostgreSQL)")
             try:
-                with app.app_context():
-                    db.create_all()
-                    logger.info("Database tables created successfully")
+                app.cli.add_command(create_tables)
+                logger.info("Database tables created successfully")
             except Exception as e:
                 logger.error(f"Failed to create database tables: {str(e)}")
                 raise
@@ -60,18 +62,14 @@ def create_app():
         app.register_blueprint(auth, url_prefix='/')
         logger.info("Blueprints registered successfully")
 
-        # Login manager setup
-        manager = login_manager.LoginManager()
-        manager.login_view = 'auth.login'
-
         try:
-            manager.init_app(app)
+            login_manager.init_app(app)
             logger.info("Login manager initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize login manager: {str(e)}")
             raise
 
-        @manager.user_loader
+        @login_manager.user_loader
         def load_user(id):
             try:
                 from .models import User
