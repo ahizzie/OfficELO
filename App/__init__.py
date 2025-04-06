@@ -30,7 +30,7 @@ def create_app():
         database_uri = environ.get('DATABASE_URL', f'sqlite:///{DB_NAME}')
 
     app.config['SQLALCHEMY_DATABASE_URI'] = database_uri  # Use the processed URI
-    app.config["SQLALCHEMY_POOL_RECYCLE"] = 299
+    app.config["SQLALCHEMY_POOL_RECYCLE"] = {'pool_recycle': 280}
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db.init_app(app)
 
