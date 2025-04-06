@@ -1,7 +1,6 @@
-from flask import Flask, current_app
+from flask import Flask, current_app, request
 from flask_sqlalchemy import SQLAlchemy
 from os import path, makedirs, environ
-import os
 from flask_login import login_manager
 from werkzeug.security import generate_password_hash
 
@@ -9,18 +8,29 @@ db = SQLAlchemy()
 DB_NAME = "database.db"
 
 
+def is_production(app):
+    """
+    Checks if the application is likely running on PythonAnywhere.
+    """
+    return 'PYTHONANYWHERE_SITE' in environ
+
+
 def create_app():
     app = Flask(__name__)
     app.config['SECRET_KEY'] = environ.get('SECRET_KEY', 'fallback')
 
-    # Get database URI safely
-    database_uri = environ.get('DATABASE_URL', f'sqlite:///{DB_NAME}')
-
-    # Fix PostgreSQL URL format if needed
-    if database_uri and database_uri.startswith('postgres://'):
-        database_uri = database_uri.replace('postgres://', 'postgresql://', 1)
+    if is_production(app):
+        database_uri = "mysql+mysqlconnector://{username}:{password}@{hostname}/{databasename}".format(
+            username="ahizzie",
+            password="tDm8V5eb6MJCHPB",
+            hostname="ahizzie.mysql.pythonanywhere-services.com",
+            databasename="ahizzie$dummy",
+        )
+    else:
+        database_uri = environ.get('DATABASE_URL', f'sqlite:///{DB_NAME}')
 
     app.config['SQLALCHEMY_DATABASE_URI'] = database_uri  # Use the processed URI
+    app.config["SQLALCHEMY_POOL_RECYCLE"] = 299
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db.init_app(app)
 
