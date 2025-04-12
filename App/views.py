@@ -7,7 +7,7 @@ from datetime import datetime
 views = Blueprint('views', __name__)
 
 
-def update_elo(player1, player2, winner):
+def calc_elo(player1, player2, winner):
     """
     Update ELO ratings for two players based on the match outcome.
     :param player1: User object for player 1
@@ -95,7 +95,7 @@ def report():
 
         # Determine winner and update ELO
         winner = 1 if your_score_int > opponent_score_int else 2
-        update_elo(current_user, opponent, winner)
+        calc_elo(current_user, opponent, winner)
 
         db.session.commit()
         flash('Match reported successfully!', 'success')
