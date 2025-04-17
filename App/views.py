@@ -14,7 +14,7 @@ def calc_elo(player1, player2, winner):
     :param player2: User object for player 2
     :param winner: 1 if player1 wins, 2 if player2 wins, 0 for a draw
     """
-    K = 32  # ELO constant
+    K = 16  # ELO constant
 
     # Expected scores
     expected_player1 = 1 / (1 + 10 ** ((player2.elo - player1.elo) / 400))
@@ -47,10 +47,15 @@ def home():
 
 @views.route('/results')
 def results():
-    # Get latest 50 matches ordered by date (newest first)
-    matches = Match.query.order_by(Match.date.desc()).limit(50).all()
-    users = User.query.all()
-    return render_template('results.html', matches=matches, users=users, user=current_user)
+    # Create aliases for User table
+    matches = Match.query.options(
+        db.joinedload(Match.player1),
+        db.joinedload(Match.player2)
+    ).order_by(
+        Match.date.desc()
+    ).limit(50).all()
+
+    return render_template('results.html', matches=matches, user=current_user)
 
 
 @views.route('/report', methods=['GET', 'POST'])
@@ -85,8 +90,8 @@ def report():
 
         # Create match record
         new_match = Match(
-            name1=current_user.name,
-            name2=opponent.name,
+            player1_id=current_user.id,
+            player2_id=opponent.id,
             score1=your_score_int,
             score2=opponent_score_int,
             date=datetime.utcnow()
@@ -112,7 +117,13 @@ def admin_dashboard():
         return redirect(url_for('views.home'))
 
     users = User.query.all()
-    matches = Match.query.order_by(Match.date.desc()).limit(50).all()
+    matches = Match.query.options(
+        db.joinedload(Match.player1),
+        db.joinedload(Match.player2)
+    ).order_by(
+        Match.date.desc()
+    ).limit(50).all()
+
     return render_template('admin.html', users=users, matches=matches, user=current_user)
 
 

@@ -1,8 +1,6 @@
-import logging
-from flask import Flask, current_app
+from flask import Flask, current_app, request
 from flask_sqlalchemy import SQLAlchemy
 from os import path, makedirs, environ
-import os
 from flask_login import login_manager
 from werkzeug.security import generate_password_hash
 
@@ -10,41 +8,49 @@ db = SQLAlchemy()
 DB_NAME = "database.db"
 
 
+def is_production(app):
+    """
+    Checks if the application is likely running on PythonAnywhere.
+    """
+    return 'PYTHONANYWHERE_SITE' in environ
+
+
 def create_app():
     app = Flask(__name__)
+    app.config['SECRET_KEY'] = environ.get('SECRET_KEY', 'fallback')
 
-    # Determine environment and set configuration
-    if 'DATABASE_URL' in os.environ:
-        # Production (Heroku)
-        app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL'].replace("postgres://", "postgresql://", 1)  # Heroku's postgres url starts with postgres://, need to replace with postgresql:// for sqlalchemy
-        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Suppress deprecation warning
+    if is_production(app):
+        database_uri = "mysql+mysqlconnector://{username}:{password}@{hostname}/{databasename}".format(
+            username="ahizzie",
+            password="tDm8V5eb6MJCHPB",
+            hostname="ahizzie.mysql.pythonanywhere-services.com",
+            databasename="ahizzie$final2",
+        )
     else:
-        # Development/Testing
-        app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{DB_NAME}'
-        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+        database_uri = environ.get('DATABASE_URL', f'sqlite:///{DB_NAME}')
 
-    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', "dev_secret_key")  # Use environment variable for production, or a default for development.
-
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_uri  # Use the processed URI
+    app.config["SQLALCHEMY_POOL_RECYCLE"] = {'pool_recycle': 280}
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db.init_app(app)
 
-    # Import and register blueprints
+    from .models import User, Match
+
+    if database_uri.startswith('sqlite://'):
+        create_database(app)
+    else:
+        with app.app_context():
+            db.create_all()
+
     from .views import views
     from .auth import auth
+
     app.register_blueprint(views, url_prefix='/')
     app.register_blueprint(auth, url_prefix='/')
 
-    # Login manager setup
-    from flask_login import LoginManager
     manager = login_manager.LoginManager()
     manager.login_view = 'auth.login'
     manager.init_app(app)
-
-    # Create tables within app context
-    with app.app_context():
-        try:
-            db.create_all()
-        except Exception as e:
-            logging.error(f"Error creating tables: {e}")
 
     @manager.user_loader
     def load_user(id):
@@ -53,4 +59,18 @@ def create_app():
 
     return app
 
+
+def create_database(app):
+    db_path = path.abspath(path.join(path.dirname(__file__), DB_NAME))
+    # db_path = "C:/Users/andrew.hislop/PycharmProjects/OfficELO/App/test_database.db"
+    print(f"Database path: {db_path}")
+    if not path.exists(db_path):
+        try:
+            makedirs(path.dirname(db_path), exist_ok=True)
+            with app.app_context():
+                from .models import User, Match
+                db.create_all()
+                print("Database created successfully!")
+        except Exception as e:
+            current_app.logger.error(f"Error creating database: {e}")
 

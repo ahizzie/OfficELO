@@ -22,11 +22,11 @@
                     {% for match in matches %}
                     <tr>
                         <td>{{ match.date.strftime('%b %d, %Y') }}</td>
-                        <td class="font-weight-bold">{{ match.name1 }}</td>
+                        <td class="font-weight-bold">{{ match.player1.name }}</td>
                         <td class="text-primary font-weight-bold">{{ match.score1 }}</td>
                         <td>vs</td>
                         <td class="text-primary font-weight-bold">{{ match.score2 }}</td>
-                        <td class="font-weight-bold">{{ match.name2 }}</td>
+                        <td class="font-weight-bold">{{ match.player2.name }}</td>
                     </tr>
                     {% endfor %}
                 {% else %}

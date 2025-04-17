@@ -14,8 +14,8 @@ def login():
         password = request.form.get('password')
         user = User.query.filter_by(name=name).first()
         if user:
-            if check_password_hash(user.password, password):
-                flash("Loggen in successfully", category="success")
+            if user.password == password:
+                flash("Logged in successfully", category="success")
                 login_user(user, remember=True)
                 return redirect(url_for('views.home'))
             else:
@@ -39,7 +39,6 @@ def signup():
         name = request.form.get('name')
         password1 = request.form.get('password1')
         password2 = request.form.get('password2')
-        league_code = request.form.get('league_code')
 
         user = User.query.filter_by(name=name).first()
         if user:
@@ -50,11 +49,9 @@ def signup():
             flash('Passwords don\'t match.', category='error')
         elif len(password1) < 5:
             flash('Password must be at least 5 characters.', category='error')
-        elif league_code != 'Powersystems':
-            flash('Incorrect league code', category='error')
         else:
             new_user = User(name=name,
-                            password=generate_password_hash(password1),
+                            password=password1,
                             elo=1000
                             )
             db.session.add(new_user)
