@@ -53,7 +53,7 @@ def results():
         db.joinedload(Match.player2)
     ).order_by(
         Match.date.desc()
-    ).limit(50).all()
+    ).limit(20).all()
 
     return render_template('results.html', matches=matches, user=current_user)
 
